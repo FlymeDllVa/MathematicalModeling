@@ -7,7 +7,6 @@ from numpy.linalg import matrix_power
 
 
 class Markov(metaclass=ABCMeta):
-
     matrix: array
 
     def __init__(self, matrix: array):
@@ -21,7 +20,12 @@ class Markov(metaclass=ABCMeta):
         :return:
         """
         with open(filename, encoding="utf-8") as file:
-            return cls(array([list(map(float, row)) for row in csv.reader(file)]))
+            data = []
+            for ir, row in enumerate(csv.reader(file)):
+                row = list(map(float, row))
+                row[ir] = 1 - sum(row)
+                data.append(row)
+            return cls(array(data))
 
     @abstractmethod
     def probability_of_switching_to_state(self, of: int, to: int, n: int):
@@ -72,11 +76,11 @@ class MarkovProcess(Markov):
     def probability_of_switching_to_state(self, of: int, to: int, n: int) -> float:
         """
         Вероятность перехода в состояние
-        
-        :param of: 
-        :param to: 
-        :param n: 
-        :return: 
+
+        :param of:
+        :param to:
+        :param n:
+        :return:
         """
         return matrix_power(self.matrix, n)[of - 1, to - 1]
 

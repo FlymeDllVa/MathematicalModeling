@@ -72,7 +72,7 @@ class QueueingSystem:
         """
 
         return (
-            1 - self.stable_condition[-1] * self.arriving
+            (1 - self.stable_condition[-1]) * self.arriving
             if absolute
             else 1 - self.stable_condition[-1]
         )
@@ -210,6 +210,7 @@ class QueueingSystem:
                 coefficients[i][3] += (buffer_array[i][j]) * (
                     probabilities[j] + coefficients[i][2] * time
                 )
+
         return [
             (
                 probabilities[x]
@@ -254,6 +255,8 @@ def main():
         f"i) Среднее время, когда в системе нет очереди:"
         f" {queueing_system.average_time_when_there_is_no_queue_in_the_system()}"
     )
+
+    print("Матрица интенсивностей:", *map(list, queueing_system.matrix), sep="\n")
 
 
 if __name__ == "__main__":
