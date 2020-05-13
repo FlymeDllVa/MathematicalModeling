@@ -1,9 +1,9 @@
-import numpy as np
+from numpy import array, linalg, zeros, diag, arange, ndarray
 
 
 class QueueingSystem:
-    matrix: np.array
-    stable_condition: np.array
+    matrix: array
+    stable_condition: array
 
     def __init__(self, arriving: int, channels: int, intensity: int, max_size: int):
         self.arriving = arriving
@@ -20,7 +20,7 @@ class QueueingSystem:
     @staticmethod
     def creation_of_transition_matrix(
         arriving: int, channels: int, intensity: int, max_size: int
-    ) -> np.array:
+    ) -> array:
         """
         Создание матрицы переходов
 
@@ -31,16 +31,16 @@ class QueueingSystem:
         :return:
         """
 
-        matrix = np.zeros((channels + max_size + 1, channels + max_size + 1))
+        temp_matrix = zeros((channels + max_size + 1, channels + max_size + 1))
         for i in range(channels + max_size):
-            matrix[i, i + 1] = arriving
-            matrix[i + 1, i] = (
-                intensity * (i + 1) if i < channels else intensity * channels
+            temp_matrix[i, i + 1], temp_matrix[i + 1, i] = (
+                arriving,
+                (intensity * (i + 1) if i < channels else intensity * channels),
             )
-        return matrix
+        return temp_matrix
 
     @staticmethod
-    def establishment_of_the_steady_state_probabilities(matrix: np.array) -> np.array:
+    def establishment_of_the_steady_state_probabilities(matrix: array) -> array:
         """
         Установившиеся вероятности
 
@@ -48,11 +48,11 @@ class QueueingSystem:
         :return:
         """
 
-        new = matrix.T - np.diag([matrix[i, :].sum() for i in range(matrix.shape[0])])
+        new = matrix.T - diag([matrix[i, :].sum() for i in range(matrix.shape[0])])
         new[-1, :] = 1
-        zeros = np.zeros(new.shape[0])
-        zeros[-1] = 1
-        return np.linalg.inv(new).dot(zeros)
+        z_m = zeros(new.shape[0])
+        z_m[-1] = 1
+        return linalg.inv(new).dot(z_m)
 
     def probability_of_denial_of_service(self) -> float:
         """
@@ -162,19 +162,18 @@ class QueueingSystem:
         :return: время нахождения
         """
 
-        buffer_array = np.zeros(self.matrix.shape)
+        temp_matrix = zeros(self.matrix.shape)
         for i in subset:
             for j in range(self.matrix.shape[0]):
-                buffer_array[j][i] = self.matrix[i][j]
+                temp_matrix[j][i] = self.matrix[i][j]
         for i in subset:
             for j in range(self.matrix.shape[0]):
                 if j != i:
-                    buffer_array[i][i] -= self.matrix[i][j]
-
+                    temp_matrix[i][i] -= self.matrix[i][j]
         not_subset, f = set(range(self.matrix.shape[0])) - subset, 0
-        for t in np.arange(time_step, time + time_step, time_step):
+        for t in arange(time_step, time + time_step, time_step):
             probabilities = self.probability_search(
-                buffer_array, subset, probabilities, time_step
+                temp_matrix, subset, probabilities, time_step
             )
             f += t * sum(
                 probabilities[i] * self.matrix[i][j] for j in not_subset for i in subset
@@ -183,7 +182,7 @@ class QueueingSystem:
 
     @staticmethod
     def probability_search(
-        buffer_array: np.ndarray, subset: set, probabilities: list, time: float
+        buffer_array: ndarray, subset: set, probabilities: list, time: float
     ) -> list:
         """
         Поиск вероятности

@@ -101,14 +101,14 @@ class MarkovProcess(Markov):
         :return:
         """
 
-        new = zeros(self.matrix.shape)
+        temp_matrix = zeros(self.matrix.shape)
         for i in range(self.matrix.shape[0]):
             for j in range(self.matrix.shape[1]):
-                new[i, j] = sum(
+                temp_matrix[i, j] = sum(
                     self.matrix[i, m] * matrix[m, j] if m != j else 0
                     for m in range(self.matrix.shape[0])
                 )
-        return new
+        return temp_matrix
 
     def probability_of_the_first_transition(self, of: int, to: int, n: int) -> float:
         """
@@ -120,10 +120,10 @@ class MarkovProcess(Markov):
         :return:
         """
 
-        final = self.matrix
+        temp_matrix = self.matrix
         for _ in range(2, n + 1):
-            final = self.make_step_in_matrix(final)
-        return final[of - 1, to - 1]
+            temp_matrix = self.make_step_in_matrix(temp_matrix)
+        return temp_matrix[of - 1, to - 1]
 
     def probability_of_transition_no_later_than(
         self, of: int, to: int, n: int
@@ -152,12 +152,11 @@ class MarkovProcess(Markov):
         """
 
         of, to = map(lambda x: x - 1, (of, to))
-        temp_matrix = self.matrix
-        res = temp_matrix[of, to]
-        for step in range(2, 1000):
+        temp_matrix, count = self.matrix, self.matrix[of, to]
+        for i in range(2, 1000):
             temp_matrix = self.make_step_in_matrix(temp_matrix)
-            res += step * temp_matrix[of, to]
-        return res
+            count += i * temp_matrix[of, to]
+        return count
 
     @lru_cache(maxsize=None)
     def probability_of_first_return(self, of: int, n: int) -> float:
@@ -169,12 +168,12 @@ class MarkovProcess(Markov):
         :return:
         """
 
-        s = zeros(self.matrix.shape)
-        for step in range(1, n):
-            s += self.probability_of_first_return(of, step) * matrix_power(
-                self.matrix, n - step
+        temp_matrix = zeros(self.matrix.shape)
+        for i in range(1, n):
+            temp_matrix += self.probability_of_first_return(of, i) * matrix_power(
+                self.matrix, n - i
             )
-        return (matrix_power(self.matrix, n) - s)[of - 1, of - 1]
+        return (matrix_power(self.matrix, n) - temp_matrix)[of - 1, of - 1]
 
     def probability_of_return_no_later_than(self, of: int, n: int) -> float:
         """
@@ -198,8 +197,7 @@ class MarkovProcess(Markov):
         """
 
         return sum(
-            step * self.probability_of_first_return(of - 1, step)
-            for step in range(1, 130)
+            i * self.probability_of_first_return(of - 1, i) for i in range(1, 130)
         )
 
     def steady_state_probability(self) -> array:
@@ -211,9 +209,7 @@ class MarkovProcess(Markov):
 
         m = self.matrix.T - eye(self.matrix.shape[0])
         m[-1, :] = 1
-        b = array([0] * (self.matrix.shape[0] - 1) + [1])
-        x = dot(linalg.inv(m), b)
-        return x
+        return dot(linalg.inv(m), array([0] * (self.matrix.shape[0] - 1) + [1]))
 
 
 def main():
